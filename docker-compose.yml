@@ -1,0 +1,148 @@
+version: '3.8'
+
+services:
+  rabbitmq:
+    image: rabbitmq:3-management
+    ports:
+      - '5672:5672'
+      - '15672:15672'
+    environment:
+      RABBITMQ_DEFAULT_USER: admin
+      RABBITMQ_DEFAULT_PASS: secret
+    networks:
+      - hybrid-data-processing-pipeline
+
+  producer:
+    build: ./rabbitmq/producer
+    depends_on:
+      - rabbitmq
+    networks:
+      - hybrid-data-processing-pipeline
+
+  consumer:
+    build: ./rabbitmq/consumer
+    depends_on:
+      - rabbitmq
+      - s3mock
+    volumes:
+      - ./local-s3:/data
+    networks:
+      - hybrid-data-processing-pipeline
+
+  s3mock:
+    image: adobe/s3mock
+    ports:
+      - '9090:9090'
+    environment:
+      initialBuckets: bronze,silver,gold
+    volumes:
+      - ./local-s3:/data
+    networks:
+      - hybrid-data-processing-pipeline
+
+  notebook:
+    build: ./jupyter
+    ports:
+      - '8888:8888'
+      - '9999:9999'
+    environment:
+      JUPYTER_TOKEN: 'test-token'
+      JUPYTER_PASSWORD: admin
+    volumes:
+      - ./jupyter/notebooks:/home/jovyan/work
+      - ./local-s3:/mnt/s3mock
+    networks:
+      - hybrid-data-processing-pipeline
+
+  postgres:
+    image: postgres:14
+    environment:
+      POSTGRES_USER: airflow
+      POSTGRES_PASSWORD: airflow
+      POSTGRES_DB: airflow
+    ports:
+      - '5432:5432'
+    volumes:
+      - airflow_db:/var/lib/postgresql/data
+    networks:
+      - hybrid-data-processing-pipeline
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U airflow']
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  postgres-producer:
+    build: ./postgres-producer
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: airflow
+      DB_USER: airflow
+      DB_PASS: airflow
+    networks:
+      - hybrid-data-processing-pipeline
+    restart: 'no'
+
+  airflow:
+    build: ./airflow
+    restart: always
+    depends_on:
+      - postgres
+    environment:
+      AIRFLOW__CORE__EXECUTOR: LocalExecutor
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres:5432/airflow
+      AIRFLOW__CORE__FERNET_KEY: ''
+      AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: 'false'
+      AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
+      AIRFLOW__LOGGING__REMOTE_LOGGING: 'False'
+      JUPYTER_TOKEN: 'test-token'
+    volumes:
+      - ./airflow/dags:/opt/airflow/dags
+      - ./jupyter/notebooks:/home/jovyan/work
+      - ./local-s3:/mnt/s3mock
+    ports:
+      - '8080:8080'
+    command: >
+      bash -c "airflow db upgrade &&
+               airflow users create --username admin --firstname Admin --lastname User --role Admin --password admin --email admin@example.com &&
+               airflow webserver"
+    networks:
+      - hybrid-data-processing-pipeline
+
+  airflow-scheduler:
+    build: ./airflow
+    depends_on:
+      - airflow
+    environment:
+      AIRFLOW__CORE__EXECUTOR: LocalExecutor
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres:5432/airflow
+      JUPYTER_TOKEN: 'test-token'
+    volumes:
+      - ./airflow/dags:/opt/airflow/dags
+      - ./jupyter/notebooks:/home/jovyan/work
+      - ./local-s3:/mnt/s3mock
+    command: airflow scheduler
+    networks:
+      - hybrid-data-processing-pipeline
+
+  # Dashboard
+  streamlit_app:
+    build: ./dashboard
+    ports:
+      - 8501:8501
+    volumes:
+      - ./local-s3:/mnt/s3mock
+    networks:
+      - hybrid-data-processing-pipeline
+
+volumes:
+  s3data:
+  airflow_db:
+
+networks:
+  hybrid-data-processing-pipeline:
+    driver: bridge

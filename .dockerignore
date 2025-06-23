@@ -1,0 +1,19 @@
+# Ignore Git files
+.git
+.gitignore
+
+# Ignore OS junk
+.DS_Store
+Thumbs.db
+
+# Ignore Python bytecode
+__pycache__/
+*.py[cod]
+
+# Ignore Airflow logs and metadata
+airflow/logs/
+airflow/airflow.db
+airflow/airflow-webserver.pid
+
+# Ignore local volumes
+local-s3/

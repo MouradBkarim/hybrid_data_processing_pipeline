@@ -1,0 +1,5 @@
+delta-spark==2.4.0
+pyspark==3.4.1
+pandas
+psycopg2-binary
+papermill==2.5.0

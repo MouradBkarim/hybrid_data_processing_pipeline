@@ -1,0 +1,42 @@
+# Byte-compiled / cache files
+__pycache__/
+*.py[cod]
+*.so
+*.egg-info/
+*.ipynb_checkpoints/
+
+# Jupyter
+.jupyter/
+.ipynb_checkpoints/
+.env
+.env.*
+
+# Airflow
+airflow/airflow.db
+airflow/airflow-webserver.pid
+airflow/logs/
+airflow/dags/__pycache__/
+airflow/.env
+airflow/__pycache__/
+
+# VSCode
+.vscode/
+
+# OS generated
+.DS_Store
+Thumbs.db
+
+# Python virtualenv
+.venv/
+venv/
+env/
+Pipfile.lock
+
+# Logs
+*.log
+
+# Local S3 data
+local-s3/*
+
+# Notebook outputs
+jupyter/notebooks/*output*.ipynb
