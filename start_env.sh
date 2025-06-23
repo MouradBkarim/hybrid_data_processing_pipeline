@@ -1,11 +1,11 @@
 #!/bin/bash
 set -e
 
-# echo "Cleaning up existing Docker containers, volumes, and networks..."
-# docker compose down --volumes --remove-orphans
+echo "Cleaning up existing Docker containers, volumes, and networks..."
+docker compose down --volumes --remove-orphans
 
-# echo "Removing dangling Docker images and containers..."
-# docker system prune -af --volumes
+echo "Removing dangling Docker images and containers..."
+docker system prune -af --volumes
 
 echo "Building all services..."
 docker compose build
