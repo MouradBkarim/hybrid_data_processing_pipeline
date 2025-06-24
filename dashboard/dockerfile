@@ -1,26 +1,9 @@
 FROM python:3.11-slim
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONUNBUFFERED=1 \
-    SPARK_VERSION=3.4.1 \
-    HADOOP_VERSION=3 \
-    DELTA_VERSION=2.4.0 \
-    SPARK_HOME=/opt/spark \
-    PYSPARK_PYTHON=python3 \
-    PATH="${PATH}:/opt/spark/bin" \
-    PYSPARK_SUBMIT_ARGS="--packages io.delta:delta-core_2.12:${DELTA_VERSION} pyspark-shell"
+    PYTHONUNBUFFERED=1
 
-RUN apt-get update && \
-    apt-get install -y curl openjdk-17-jdk wget unzip && \
-    export JAVA_HOME=$(dirname $(dirname $(readlink -f $(which javac)))) && \
-    echo "export JAVA_HOME=$JAVA_HOME" >> /etc/profile.d/java_home.sh && \
-    chmod +x /etc/profile.d/java_home.sh && \
-    rm -rf /var/lib/apt/lists/*
-
-RUN curl -fSL https://archive.apache.org/dist/spark/spark-${SPARK_VERSION}/spark-${SPARK_VERSION}-bin-hadoop${HADOOP_VERSION}.tgz -o /tmp/spark.tgz && \
-    tar -xzf /tmp/spark.tgz -C /opt && \
-    mv /opt/spark-${SPARK_VERSION}-bin-hadoop${HADOOP_VERSION} ${SPARK_HOME} && \
-    rm /tmp/spark.tgz
+RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
 
 COPY requirements.txt .
 RUN pip install --upgrade pip && pip install -r requirements.txt
